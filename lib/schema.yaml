@@ -10,6 +10,11 @@ properties:
     - type: array
       items:
         $ref: #
+  alternatives:
+    anyOf:
+    - type: array
+      items:
+        $ref: #
   omit:
     description: List of properties to omit
     type: array

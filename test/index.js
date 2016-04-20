@@ -35,7 +35,13 @@ describe('reschema', function () {
       schema: {
         properties: {
           prop1: {validation: {type: 'string'}},
-          prop2: {validation: {type: 'integer'}}
+          prop2: {validation: {type: 'integer'}},
+          prop5: {
+            alternatives: [
+              {validation: {type: 'string'}},
+              {validation: {type: 'integer'}}
+            ]
+          }
         }
       }
     });
@@ -44,14 +50,56 @@ describe('reschema', function () {
       description: 'some description',
       array: true,
       properties: {
-        prop1: {type: 'someothertype'}
+        prop1: {
+          type: 'someothertype',
+          properties: {
+            prop4: {validation: {type: 'boolean'}}
+          }
+        }
       }
     }, {loader: loaderStub});
 
     const context = {};
     return reschema.toJSONSchema(context).then(jsonSchema => {
-      expect(jsonSchema).to.be.deep.equal({"type":"array","items":{"type":"object","properties":{"prop1":{"type":"object","allOf":["#/definitions/someothertype",{"type":"object","properties":{"prop1":{"type":"string"},"prop2":{"type":"integer"}}}]}}},"description":"some description"});
-      expect(context).to.be.deep.equal({"definitions":{"someothertype":{"type":"object","properties":{"prop1":{"type":"string"},"prop2":{"type":"integer"}}}}});
+      expect(jsonSchema).to.be.deep.equal({
+        type: "array",
+        items:{
+          type: "object",
+          properties: {
+            prop1: {
+              type: 'object',
+              allOf: [
+                {$ref: '#/definitions/someothertype'},
+                {
+                  type: 'object',
+                  properties: {
+                    prop4: {type: 'boolean'}
+                  }
+                }
+              ]
+            }
+          }
+        },
+        description: 'some description'
+      });
+      expect(context).to.be.deep.equal({
+        definitions: {
+          someothertype: {
+            type: "object",
+            properties: {
+              prop1: {type: "string"},
+              prop2: {type:"integer"},
+              prop5: {
+                type: 'object',
+                anyOf: [
+                  {type: 'string'},
+                  {type: 'integer'}
+                ]
+              }
+            }
+          }
+        }
+      });
     });
   });
 
