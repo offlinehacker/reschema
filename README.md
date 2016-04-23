@@ -1,5 +1,12 @@
 # reschema [![NPM version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Dependency Status][daviddm-image]][daviddm-url] [![Coverage percentage][coveralls-image]][coveralls-url]
-> Better schema
+> Not yet another schema validator
+
+
+## About
+
+ReSchema is data annotator with validation capabilities. instead of thinking of
+schema as set of validation rules, it gives you a way to describe data semantics,
+of course there's also some validation involved.
 
 ## Installation
 

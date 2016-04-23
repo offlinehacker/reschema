@@ -3,132 +3,125 @@
 const expect = require('chai').expect;
 const sinon = require('sinon');
 
-const Reschema = require('../lib');
+const ReSchema = require('../lib');
 
 describe('reschema', function () {
-  it('should validate schema', () => {
-    const reschema = new Reschema({
-      type: 'sometype',
-      description: 'test',
-      properties: {
-        prop1: {
-          description: 'Prop 1',
-          extend: [
-            {type: 'typeone'},
-            {type: 'typetwo'}
-          ],
-          omit: ["prop2"],
-          properties: {
-            prop2: {
-              type: 'somethirdtype',
-              array: true
+  it('should load schema', () => {
+    const options = {
+      loader: name => {
+        if (name === 'type1') {
+          return {
+            name: 'type1',
+            schema: {
+              properties: {
+                prop4: {
+                  meta: {description: 'prop4'},
+                  schema: {validation: {type: 'string'}}
+                }
+              }
             }
-          }
+          };
+        } else if (name === 'type2') {
+          return {
+            name: 'type2',
+            meta: {description: 'type2'},
+            schema: {
+              validation: {type: 'integer'}
+            }
+          };
+        } else if (name === 'type3') {
+          return {
+            name: 'type3',
+            schema: 'type2'
+          };
         }
       }
+    };
+
+    return ReSchema.create({
+      extend: ['type1', {
+        properties: {
+          prop1: {schema: {validation: {type: 'string'}}},
+          prop2: {schema: {validation: {type: 'string'}}}
+        }
+      }],
+      properties: {
+        prop1: {
+          meta: {description: 'prop1'},
+          schema: {validation: {type: 'integer'}}
+        },
+        prop3: {
+          schema: [
+            {
+              description: 'stringprop3',
+              validation: {type: 'string'}
+            },
+            {
+              description: 'intprop3',
+              extend: "type2"
+            }
+          ]
+        },
+        prop5: 'type3',
+        prop6: {schema: {items: 'type2'}}
+      }
+    }, options).then(schema => {
+      expect(schema.kind).to.be.equal('value');
+      expect(schema.properties).to.have.property('prop1');
+      expect(schema.properties).to.have.property('prop2');
+      expect(schema.properties).to.have.property('prop3');
+      expect(schema.properties).to.have.property('prop4');
+      expect(schema.properties.prop1.kind).to.be.equal('property');
+
+      expect(schema.properties.prop1.meta)
+        .to.be.deep.equal({description: 'prop1'});
+      expect(schema.properties.prop1.schema.validation)
+        .to.be.deep.equal({type: 'integer'});
+      expect(schema.properties.prop1.meta.description).to.be.equal('prop1');
+      expect(schema.properties.prop3.schema.kind).to.be.equal('alternatives');
+      expect(schema.properties.prop3.schema.alternatives[0].description)
+        .to.be.deep.equal('stringprop3');
+      expect(schema.properties.prop3.schema.alternatives[0].validation)
+        .to.be.deep.equal({type: 'string'});
+      expect(schema.properties.prop3.schema.alternatives[1].validation)
+        .to.be.deep.equal({type: 'integer'});
+
+      expect(schema.properties.prop5.schema.kind).to.be.equal('type');
+      expect(schema.properties.prop5.schema.name).to.be.equal('type2');
+
+      expect(schema.properties.prop6.schema.kind).to.be.equal('array');
+      expect(schema.properties.prop6.schema.items.kind).to.be.equal('type');
+      expect(schema.properties.prop6.schema.items.name).to.be.equal('type2');
     });
   });
 
   it('should convert to json schema', () => {
-    const loaderStub = sinon.stub().returns({
-      name: 'someothertype',
-      schema: {
-        properties: {
-          prop1: {validation: {type: 'string'}},
-          prop2: {validation: {type: 'integer'}},
-          prop5: {
-            alternatives: [
-              {validation: {type: 'string'}},
-              {validation: {type: 'integer'}}
-            ]
-          }
+    const options = {
+      loader: sinon.stub().returns({
+        name: 'type2',
+        meta: {description: 'type2'},
+        schema: {
+          validation: {type: 'integer'}
         }
-      }
-    });
-
-    const reschema = new Reschema({
-      description: 'some description',
-      array: true,
-      properties: {
-        prop1: {
-          type: 'someothertype',
-          properties: {
-            prop4: {validation: {type: 'boolean'}}
-          }
-        }
-      }
-    }, {loader: loaderStub});
+      })
+    };
 
     const context = {};
-    return reschema.toJSONSchema(context).then(jsonSchema => {
-      expect(jsonSchema).to.be.deep.equal({
-        type: "array",
-        items:{
-          type: "object",
-          properties: {
-            prop1: {
-              type: 'object',
-              allOf: [
-                {$ref: '#/definitions/someothertype'},
-                {
-                  type: 'object',
-                  properties: {
-                    prop4: {type: 'boolean'}
-                  }
-                }
-              ]
-            }
-          }
-        },
-        description: 'some description'
-      });
-      expect(context).to.be.deep.equal({
-        definitions: {
-          someothertype: {
-            type: "object",
-            properties: {
-              prop1: {type: "string"},
-              prop2: {type:"integer"},
-              prop5: {
-                type: 'object',
-                anyOf: [
-                  {type: 'string'},
-                  {type: 'integer'}
-                ]
-              }
-            }
-          }
-        }
-      });
-    });
-  });
-
-  it('should resolve schema', () => {
-    const reschema = new Reschema({
-      extend: [{
-        description: 'some description',
-        properties: {
-          prop1: {description: 'prop1'},
-          prop2: {description: 'prop2'}
-        }
-      }, {
-        description: 'some other description',
-        properties: {
-          prop3: {description: 'prop3'},
-          prop1: {description: 'newprop1'}
-        }
-      }],
+    return ReSchema.create({
       properties: {
-        prop4: {description: 'prop4'}
+        prop1: 'type2'
       }
-    });
+    }, options).then(schema => {
+      const jsonSchema = schema.toJSONSchema(context);
 
-    return reschema.expandProperties().then(properties => {
-      expect(properties).to.have.property('prop1');
-      expect(properties).to.have.property('prop2');
-      expect(properties).to.have.property('prop3');
-      expect(properties).to.have.property('prop4');
-      expect(properties.prop1.description).to.be.equal('newprop1');
+      expect(jsonSchema).to.be.deep.equal({
+        type: 'object',
+        properties: {prop1: { '$ref': '#!/definitions/type2' }}
+      })
+
+      expect(context).to.be.deep.equal({
+        definitions: {type2: { type: 'integer', description: 'type2' }}
+      });
     });
   });
 });
