@@ -80,7 +80,7 @@ describe('reschema', function () {
         .to.be.deep.equal('stringprop3');
       expect(schema.properties.prop3.schema.alternatives[0].schema.validation)
         .to.be.deep.equal({type: 'string'});
-      expect(schema.properties.prop3.schema.alternatives[1].schema.validation)
+      expect(schema.properties.prop3.schema.alternatives[1].schema.schema.validation)
         .to.be.deep.equal({type: 'integer'});
 
       expect(schema.properties.prop5.schema.kind).to.be.equal('type');
@@ -97,7 +97,7 @@ describe('reschema', function () {
       return ReSchema.create(
         {validation: {type: 'string'}}
       ).then(schema => {
-        const jsonSchema = schema.toJSONSchema();
+        const jsonSchema = schema.to('JsonSchema');
         expect(jsonSchema.type).to.be.equal('string');
       });
     });
@@ -123,7 +123,7 @@ describe('reschema', function () {
         }
       }).then(schema => {
         const context = {};
-        const jsonSchema = schema.toJSONSchema(context);
+        const jsonSchema = schema.to('JsonSchema', null, context);
 
         expect(jsonSchema).to.be.deep.equal({
           type: 'object',
@@ -160,13 +160,13 @@ describe('reschema', function () {
           prop1: 'type2'
         }
       }, options).then(schema => {
-        const jsonSchema = schema.toJSONSchema(context);
+        const jsonSchema = schema.to('JsonSchema', null, context);
 
         expect(jsonSchema).to.be.deep.equal({
           type: 'object',
           properties: {
             prop1: {
-              $ref: '#!/definitions/type2',
+              $ref: '#/definitions/type2',
               description: 'type2'
             }
           }
@@ -182,7 +182,7 @@ describe('reschema', function () {
       return ReSchema.create({
         items: {validation: {type: 'string'}}
       }).then(schema => {
-        const jsonSchema = schema.toJSONSchema();
+        const jsonSchema = schema.to('JsonSchema');
         expect(jsonSchema).to.be.deep.equal({
           type: 'array',
           items: {type: 'string'}
@@ -195,7 +195,7 @@ describe('reschema', function () {
         {validation: {type: 'string'}},
         {validation: {type: 'integer'}}
       ]).then(schema => {
-        const jsonSchema = schema.toJSONSchema();
+        const jsonSchema = schema.to('JsonSchema');
         expect(jsonSchema).to.be.deep.equal({
           anyOf: [{type: 'string'}, {type: 'integer'}]
         });
