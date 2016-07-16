@@ -92,6 +92,88 @@ describe('reschema', function () {
     });
   });
 
+  describe('joi schema', () => {
+    it('should convert and validate with simple schema', () => {
+      return ReSchema.create(
+        {validation: {type: 'string'}}
+      ).then(schema => {
+        const joiSchema = schema.to('joi');
+        expect(joiSchema.validate("abcd").error).to.be.null;
+      });
+    });
+
+    it('should convert object schema', () => {
+      return ReSchema.create({
+        properties: {
+          prop1: {
+            meta: {description: 'prop1'},
+            schema: {validation: {type: 'string'}}
+          },
+          prop2: {
+            meta: {description: 'prop2'},
+            schema: {
+              properties: {
+                subprop1: {
+                  meta: {description: 'subprop1'},
+                  schema: {validation: {type: 'integer'}}
+                }
+              }
+            }
+          }
+        }
+      }).then(schema => {
+        const joiSchema = schema.to('joi', {embedTypes: false});
+        const result = joiSchema.validate({prop1: 'abcd', prop2: {subprop1: 12}});
+        expect(result.error).to.be.null
+      });
+    });
+
+    it('should convert referencing schema', () => {
+      const options = {
+        loader: sinon.stub().returns({
+          name: 'type2',
+          meta: {description: 'type2'},
+          schema: {
+            validation: {type: 'integer'}
+          }
+        })
+      };
+
+      return ReSchema.create({
+        properties: {
+          prop1: 'type2'
+        }
+      }, options).then(schema => {
+        const joiSchema = schema.to('joi', {embedTypes: true});
+        const result = joiSchema.validate({prop1: 12});
+        expect(result.error).to.be.null;
+        expect(result.value.prop1._type).to.be.equal('type2');
+      });
+    });
+
+    it('should convert array schema', () => {
+      return ReSchema.create({
+        items: {validation: {type: 'string'}}
+      }).then(schema => {
+        const joiSchema = schema.to('joi');
+        const result = joiSchema.validate(['abcd', 'defgh', 'ijkl']);
+        expect(result.error).to.be.null;
+      });
+    });
+
+    it('should convert alternatives schema', () => {
+      return ReSchema.create([
+        {validation: {type: 'string'}},
+        {validation: {type: 'integer'}}
+      ]).then(schema => {
+        const joiSchema = schema.to('joi');
+        expect(joiSchema.validate(1234).error).to.be.null;
+        expect(joiSchema.validate('test').error).to.be.null;
+        expect(joiSchema.validate(true).error).to.not.be.null;
+      });
+    });
+  });
+
   describe('json schema', () => {
     it('should convert simple value schema', () => {
       return ReSchema.create(
@@ -134,12 +216,12 @@ describe('reschema', function () {
               description: 'prop2',
               properties: {
                 subprop1: {
-                  type: 'integer', description:'subprop1'
+                  type: 'integer', description: 'subprop1'
                 }
               }
             }
           }
-        })
+        });
       });
     });
 
